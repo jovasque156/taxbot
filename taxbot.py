@@ -80,7 +80,7 @@ if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
     st.chat_message("user").write(prompt)
 
     if not api_key:
-        st.info("Please add your OpenAI API key to continue.")
+        st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
         st.stop()
 
     llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
