@@ -55,18 +55,6 @@ with st.sidebar:
             st.session_state.disabled = True
             st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
 
-llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", openai_api_key=api_key, streaming=True)
-llm_math_chain = LLMMathChain.from_llm(llm_m)
-tools = tools + [Tool(
-        name="Calculadora",
-        func=llm_math_chain.run,
-        description="Util para cuando neceistas responder preguntas sobre matemáticas",
-    )]
-
-descripcion_tools = ''
-for t in tools:
-    descripcion_tools += '>'+t.name+':'+t.description+'\n'
-
 st.title("🔎 TaxBot")
 
 if len(msgs.messages) == 0 or st.sidebar.button("Reset chat history"):
@@ -92,6 +80,18 @@ if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
     if not api_key:
         st.info("Please add your OpenAI API key to continue.")
         st.stop()
+
+    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", openai_api_key=api_key, streaming=True)
+    llm_math_chain = LLMMathChain.from_llm(llm_m)
+    tools = tools + [Tool(
+            name="Calculadora",
+            func=llm_math_chain.run,
+            description="Util para cuando neceistas responder preguntas sobre matemáticas",
+        )]
+
+    descripcion_tools = ''
+    for t in tools:
+        descripcion_tools += '>'+t.name+':'+t.description+'\n'
 
     llm = ChatOpenAI(temperature=0.2,model_name=id_model, streaming=True)
     tax_agent = initialize_agent(tools=tools,
