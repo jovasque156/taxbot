@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from langchain.agents import initialize_agent, AgentType
 from langchain.callbacks import StreamlitCallbackHandler
@@ -52,6 +53,7 @@ with st.sidebar:
         if not api_key or not id_model:
             st.warning('Por favor, ingresa tus credenciales y selecciona el modelo!', icon='⚠️')
         else:
+            os.environ['OPEN_API_KEY'] = api_key
             st.session_state.disabled = True
             st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
 
@@ -81,7 +83,7 @@ if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
         st.info("Please add your OpenAI API key to continue.")
         st.stop()
 
-    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", openai_api_key=api_key, streaming=True)
+    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
     llm_math_chain = LLMMathChain.from_llm(llm_m)
     tools = tools + [Tool(
             name="Calculadora",
