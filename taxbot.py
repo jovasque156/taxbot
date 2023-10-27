@@ -10,16 +10,47 @@ from langchain.tools import Tool
 from tools import tools
 from langchain.chains import LLMMathChain
 
-system_message='''Eres un chatbot muy amable teniendo una conversación con un humano. Solo sabes calcular impuestos de Chile, por tanto SIEMPRE haz los cálculos en CLP (Pesos Chilenos). SOLO respondes a preguntas relacionadas con cálculo de impuestos. Ante cualquier pregunta NO RELACIONADA con impuestos, debes indicar que no puedes responder a esa pregunta.
-Para responder las preguntas tienes acceso a las siguientes herramientas:
+llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
+llm_math_chain = LLMMathChain.from_llm(llm_m)
+tools = tools + [Tool(
+        name="Calculadora",
+        func=llm_math_chain.run,
+        description=" útil para responder preguntas matemáticas básicas y realizar sumas necesarias, como por ej, el cálculo del ingreso anual total.",
+    )]
 
-Calculo Impuesto: útil para calcular el impuesto dado el INGRESO ANUAL y el AÑO FISCAL. Formato input función (ingreso_anual,año). Solo años 2021, 2022, y 2023.
-Calculadora: util para cuando neceistas responder preguntas sobre matemáticas
+descripcion_tools = ''
+for t in tools:
+    descripcion_tools += '>'+t.name+': '+t.description+'\n'
+    
+system_message=f'''Eres un chatbot especializado y diseñado exclusivamente para calcular impuestos en Chile. Todas los cálculos deben realizarse en Pesos Chilenos (CLP). Tu función principal es responder preguntas relacionadas con el cálculo de impuestos y guiar al usuario para obtener información detallada sobre sus diferentes tipos de ingresos con el objetivo de determinar su impuesto anual total. 
+Para lograr esto, debes preguntar al usuario acerca de las distintas fuentes de ingreso que podría tener, que incluyen:
+
+>Ingresos por sueldos o salarios recibidos.
+>Ingresos por arriendo.
+>Ingresos por boletas de honorarios. DEBES identificar si es bruto o líquido. NO ASUMAS EL TIPO. Si es líquido, debes dividir el monto por 0.87.
+>Ingresos como dueño o socio de una empresa.
+>Créditos Hipotecarios.
+>Total Créditos Tributarios. El total es la suma de:
+    -Crédito por impuesto de ingresos brutos de boletas de honorarios.
+    -Crédito por impuesto retenido en sueldos y salarios (impuesto único). 
+    -Otros declarados por el usuario.
+>Año Fiscal. NO ASUMAS el año si el usuario no lo hizo explícito. En ese caso, DEBES preguntar.
+
+Si alguna información de esta lista no es declarada, DEBES PREGUNTAR AL USUARIO por ella. Si el usuario no sabe la respuesta, DEBES guiarlo en encontrar la respuesta. PUEDES PROPONER ASUMIR UN VALOR POR DEFECTO, pero DEBES PREGUNTAR AL USUARIO si está de acuerdo.
+Una vez que hayas recopilado TODA LA INFORMACIÓN NECESARIA, debes sumar todos los ingresos para obtener el total del ingreso ANUAL y calcular el impuesto usando este ingreso.
+Finalmente, debes sumar todos los créditos tributarios identificados y restarlos del impuesto calculado. Luego debes proporcionar el total a pagar o a favor (devolución de impuestos).
+NO USES decimales para separar los miles. Usa PUNTO para separar los decimales.
+
+Información Importante:
+Monto Líquido de una Boleta de Honorarios: el receptor del servicio retuvo el impuesto de la boleta.
+
+Herramientas disponibles:
+{descripcion_tools}
 
 Use the following format:
 Question: the input question you must answer
 Thought: you should always think about what to do, skip to Final Answer if you think no action is needed.
-Action: the action to take, should be one of [Calculo Impuesto, Calculadora, Final Answer]
+Action: the action to take, should be one of {str([t.name for t in tools]).replace("'", '')}
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
@@ -27,10 +58,11 @@ Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
 Chat history:
-{chat_history}
+{{chat_history}}
 
-Question: {input}
-Thought:{agent_scratchpad}'''
+Question: {{input}}
+Thought:{{agent_scratchpad}}'''
+
 msgs = StreamlitChatMessageHistory()
 memory = ConversationBufferMemory(
     chat_memory=msgs, return_messages=True, memory_key="chat_history", output_key="output"
@@ -58,6 +90,7 @@ with st.sidebar:
             st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
 
 st.title("🔎 TaxBot")
+st.write('Este es un chatbot de prueba para trabajar en relación al cálculo de impuestos en Chile. Por favor, ingresa tu pregunta en la casilla de más abajo.')
 
 if len(msgs.messages) == 0 or st.sidebar.button("Reset chat history"):
     msgs.clear()
@@ -75,25 +108,12 @@ for idx, msg in enumerate(msgs.messages):
                 st.write(step[1])
         st.write(msg.content)
 
-st.write('Este es un chatbot de prueba para trabajar en relación al cálculo de impuestos en Chile. Por favor, ingresa tu pregunta en la casilla de más abajo.')
 if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
     st.chat_message("user").write(prompt)
 
     if not api_key:
         st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
         st.stop()
-
-    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
-    llm_math_chain = LLMMathChain.from_llm(llm_m)
-    tools = tools + [Tool(
-            name="Calculadora",
-            func=llm_math_chain.run,
-            description="Util para cuando neceistas responder preguntas sobre matemáticas",
-        )]
-
-    descripcion_tools = ''
-    for t in tools:
-        descripcion_tools += '>'+t.name+':'+t.description+'\n'
 
     llm = ChatOpenAI(temperature=0.2,model_name=id_model, streaming=True)
     tax_agent = initialize_agent(tools=tools,
@@ -102,7 +122,7 @@ if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
                             agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
                             handle_parsing_errors=True,
                             return_intermediate_steps=True)
-    
+
     tax_agent.agent.llm_chain.prompt.input_variables = ['chat_history', 'input', 'agent_scratchpad']
     tax_agent.agent.llm_chain.prompt.template = system_message
 

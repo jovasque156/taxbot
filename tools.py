@@ -1,5 +1,12 @@
 from langchain.tools import Tool
-        
+
+def credito_boleta_honorario(monto_total_tipo)-> str:
+    monto_total, tipo = eval(monto_total_tipo)
+    if tipo.lower() == 'bruto':
+        return monto_total*0.13
+    elif tipo.lower() == 'liquido' or tipo.lower()=='líquido':
+        return (monto_total/0.87)-monto_total
+
 def calcular_impuesto(ingreso_anual_anio)-> str:
     renta_anual, anio = eval(ingreso_anual_anio)
     if anio==2023:
@@ -57,7 +64,12 @@ def calcular_impuesto(ingreso_anual_anio)-> str:
 tools = [
     Tool(
         name ='Calculo Impuesto',
-        description='útil para calcular el impuesto dado el INGRESO ANUAL IMPONIBLE y el AÑO FISCAL. Formato input función (ingreso_anual,año). Solo años 2021, 2022, y 2023.',
+        description='útil para calcular el impuesto basado en el INGRESO ANUAL y el AÑO FISCAL. El formato para utilizar esta función es (ingreso_anual, año_fiscal). Solo puedes realizar cálculos para los años 2021, 2022 y 2023.',
         func=calcular_impuesto,
     ),
+    Tool(
+        name = 'Credito Boleta Honorario',
+        description='útil para calcular el impuesto de la boleta de honorario dado el MONTO TOTAL y el TIPO (bruto o líquido). Formato input función (monto_total,tipo).',
+        func=credito_boleta_honorario,
+    )
 ]
