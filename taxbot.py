@@ -10,19 +10,41 @@ from langchain.tools import Tool
 from tools import tools
 from langchain.chains import LLMMathChain
 
-llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
-llm_math_chain = LLMMathChain.from_llm(llm_m)
-tools = tools + [Tool(
-        name="Calculadora",
-        func=llm_math_chain.run,
-        description=" útil para responder preguntas matemáticas básicas y realizar sumas necesarias, como por ej, el cálculo del ingreso anual total.",
-    )]
+st.session_state.disabled = False
 
-descripcion_tools = ''
-for t in tools:
-    descripcion_tools += '>'+t.name+': '+t.description+'\n'
+with st.sidebar:
+    if ('OPENAI_API_KEY' in st.secrets) and ('openai_model' in st.secrets):
+        api_key = st.secrets['OPENAI_API_KEY']
+        id_model = st.secrets['openai_model']
+    else:    
+        api_key = st.text_input("OpenAI API Key", placeholder='Ingresa tu OPEN API Key', type="password", disabled=st.session_state.disabled)
+        id_model = st.selectbox('Modelo', ('gpt-3.5-turbo', 'gpt-4'), index=None, placeholder='Selecciona un modelo', disabled=st.session_state.disabled)
     
-system_message=f'''Eres un chatbot especializado y diseñado exclusivamente para calcular impuestos en Chile. Todas los cálculos deben realizarse en Pesos Chilenos (CLP). Tu función principal es responder preguntas relacionadas con el cálculo de impuestos y guiar al usuario para obtener información detallada sobre sus diferentes tipos de ingresos con el objetivo de determinar su impuesto anual total. 
+    placeholder = st.empty()    
+    with placeholder.container():
+        if not api_key or not id_model:
+            st.warning('Por favor, ingresa tus credenciales y selecciona el modelo!', icon='⚠️')
+        else:
+            os.environ['OPENAI_API_KEY'] = api_key
+            st.session_state.disabled = True
+            st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
+
+if not api_key:
+    st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
+else:
+    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
+    llm_math_chain = LLMMathChain.from_llm(llm_m)
+    tools = tools + [Tool(
+            name="Calculadora",
+            func=llm_math_chain.run,
+            description=" útil para responder preguntas matemáticas básicas y realizar sumas necesarias, como por ej, el cálculo del ingreso anual total.",
+        )]
+
+    descripcion_tools = ''
+    for t in tools:
+        descripcion_tools += '>'+t.name+': '+t.description+'\n'
+        
+    system_message=f'''Eres un chatbot especializado y diseñado exclusivamente para calcular impuestos en Chile. Todas los cálculos deben realizarse en Pesos Chilenos (CLP). Tu función principal es responder preguntas relacionadas con el cálculo de impuestos y guiar al usuario para obtener información detallada sobre sus diferentes tipos de ingresos con el objetivo de determinar su impuesto anual total. 
 Para lograr esto, debes preguntar al usuario acerca de las distintas fuentes de ingreso que podría tener, que incluyen:
 
 >Ingresos por sueldos o salarios recibidos.
@@ -63,31 +85,10 @@ Chat history:
 Question: {{input}}
 Thought:{{agent_scratchpad}}'''
 
-msgs = StreamlitChatMessageHistory()
-memory = ConversationBufferMemory(
-    chat_memory=msgs, return_messages=True, memory_key="chat_history", output_key="output"
-)
-
-
-
-st.session_state.disabled = False
-
-with st.sidebar:
-    if ('OPENAI_API_KEY' in st.secrets) and ('openai_model' in st.secrets):
-        api_key = st.secrets['OPENAI_API_KEY']
-        id_model = st.secrets['openai_model']
-    else:    
-        api_key = st.text_input("OpenAI API Key", placeholder='Ingresa tu OPEN API Key', type="password", disabled=st.session_state.disabled)
-        id_model = st.selectbox('Modelo', ('gpt-3.5-turbo', 'gpt-4'), index=None, placeholder='Selecciona un modelo', disabled=st.session_state.disabled)
-    
-    placeholder = st.empty()    
-    with placeholder.container():
-        if not api_key or not id_model:
-            st.warning('Por favor, ingresa tus credenciales y selecciona el modelo!', icon='⚠️')
-        else:
-            os.environ['OPENAI_API_KEY'] = api_key
-            st.session_state.disabled = True
-            st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
+    msgs = StreamlitChatMessageHistory()
+    memory = ConversationBufferMemory(
+        chat_memory=msgs, return_messages=True, memory_key="chat_history", output_key="output"
+    )    
 
 st.title("🔎 TaxBot")
 st.write('Este es un chatbot de prueba para trabajar en relación al cálculo de impuestos en Chile. Por favor, ingresa tu pregunta en la casilla de más abajo.')
