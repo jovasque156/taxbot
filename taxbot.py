@@ -29,6 +29,10 @@ with st.sidebar:
             st.session_state.disabled = True
             st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
 
+st.title("🔎 TaxBot")
+st.write('Este es un chatbot de prueba para trabajar en relación al cálculo de impuestos en Chile. Por favor, ingresa tu pregunta en la casilla de más abajo.')
+
+
 if not api_key:
     st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
 else:
@@ -90,47 +94,45 @@ Thought:{{agent_scratchpad}}'''
         chat_memory=msgs, return_messages=True, memory_key="chat_history", output_key="output"
     )    
 
-st.title("🔎 TaxBot")
-st.write('Este es un chatbot de prueba para trabajar en relación al cálculo de impuestos en Chile. Por favor, ingresa tu pregunta en la casilla de más abajo.')
 
-if len(msgs.messages) == 0 or st.sidebar.button("Reset chat history"):
-    msgs.clear()
-    st.session_state.steps = {}
+    if len(msgs.messages) == 0 or st.sidebar.button("Reset chat history"):
+        msgs.clear()
+        st.session_state.steps = {}
 
-avatars = {"human": "user", "ai": "assistant"}
+    avatars = {"human": "user", "ai": "assistant"}
 
-for idx, msg in enumerate(msgs.messages):
-    with st.chat_message(avatars[msg.type]):
-        for step in st.session_state.steps.get(str(idx), []):
-            if step[0].tool == "_Exception":
-                continue
-            with st.status(f"**{step[0].tool}**: {step[0].tool_input}", state="complete"):
-                st.write(step[0].log)
-                st.write(step[1])
-        st.write(msg.content)
+    for idx, msg in enumerate(msgs.messages):
+        with st.chat_message(avatars[msg.type]):
+            for step in st.session_state.steps.get(str(idx), []):
+                if step[0].tool == "_Exception":
+                    continue
+                with st.status(f"**{step[0].tool}**: {step[0].tool_input}", state="complete"):
+                    st.write(step[0].log)
+                    st.write(step[1])
+            st.write(msg.content)
 
-if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
-    st.chat_message("user").write(prompt)
+    if prompt := st.chat_input(placeholder='Escribe tu pregunta aquí'):
+        st.chat_message("user").write(prompt)
 
-    if not api_key:
-        st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
-        st.stop()
+        if not api_key:
+            st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
+            st.stop()
 
-    llm = ChatOpenAI(temperature=0.2,model_name=id_model, streaming=True)
-    tax_agent = initialize_agent(tools=tools,
-                            llm=llm, 
-                            memory=memory,
-                            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
-                            handle_parsing_errors=True,
-                            return_intermediate_steps=True)
+        llm = ChatOpenAI(temperature=0.2,model_name=id_model, streaming=True)
+        tax_agent = initialize_agent(tools=tools,
+                                llm=llm, 
+                                memory=memory,
+                                agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, 
+                                handle_parsing_errors=True,
+                                return_intermediate_steps=True)
 
-    tax_agent.agent.llm_chain.prompt.input_variables = ['chat_history', 'input', 'agent_scratchpad']
-    tax_agent.agent.llm_chain.prompt.template = system_message
+        tax_agent.agent.llm_chain.prompt.input_variables = ['chat_history', 'input', 'agent_scratchpad']
+        tax_agent.agent.llm_chain.prompt.template = system_message
 
-    with st.chat_message("assistant"):
-        st_cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=True)
-        response = tax_agent(prompt, callbacks=[st_cb])
-        # tax_agent.early_stopping_method()
-        st.write(response["output"])
-        # st.write(response)
-        st.session_state.steps[str(len(msgs.messages) - 1)] = response["intermediate_steps"]
+        with st.chat_message("assistant"):
+            st_cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=True)
+            response = tax_agent(prompt, callbacks=[st_cb])
+            # tax_agent.early_stopping_method()
+            st.write(response["output"])
+            # st.write(response)
+            st.session_state.steps[str(len(msgs.messages) - 1)] = response["intermediate_steps"]
