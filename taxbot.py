@@ -18,7 +18,7 @@ with st.sidebar:
         id_model = st.secrets['openai_model']
     else:    
         api_key = st.text_input("OpenAI API Key", placeholder='Ingresa tu OPEN API Key', type="password", disabled=st.session_state.disabled)
-        id_model = st.selectbox('Modelo', ('gpt-3.5-turbo', 'gpt-4'), index=None, placeholder='Selecciona un modelo', disabled=st.session_state.disabled)
+        id_model = st.selectbox('Modelo', ('gpt-3.5-turbo', 'gpt-3.5-turbo-1106', 'gpt-4', 'gpt-4-1106-preview'), index=None, placeholder='Selecciona un modelo', disabled=st.session_state.disabled)
     
     placeholder = st.empty()    
     with placeholder.container():
