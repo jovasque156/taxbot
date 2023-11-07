@@ -36,7 +36,7 @@ st.write('Este es un chatbot de prueba para trabajar en relación al cálculo de
 if (not api_key) or (id_model is None):
     st.info("Por favor, ingresa tus credenciales y selecciona el modelo!")
 else:
-    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo", streaming=True)
+    llm_m = OpenAI(temperature=0, model_name="gpt-3.5-turbo-1106", streaming=True)
     llm_math_chain = LLMMathChain.from_llm(llm_m)
     tools = tools + [Tool(
             name="Calculadora",
