@@ -23,12 +23,8 @@ with st.sidebar:
     placeholder = st.empty()    
     with placeholder.container():
         if (not api_key) or (id_model is None):
-            st.write(api_key)
-            print(id_model)
             st.warning('Por favor, ingresa tus credenciales y selecciona el modelo!', icon='⚠️')
         else:
-            st.write(api_key)
-            st.write(id_model)
             os.environ['OPENAI_API_KEY'] = api_key
             st.session_state.disabled = True
             st.success('¡API KEY ingresada! \n\nYa puedes ingresar los mensajes. \n\n Para seleccionar otro modelo, refresca la página', icon='👉')
